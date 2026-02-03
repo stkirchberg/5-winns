@@ -3,128 +3,129 @@ const http = require('http');
 const { Server } = require('socket.io');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const session = require('express-session');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
 const { key, checkWinLine } = require('./logic');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Database Setup
 const db = new sqlite3.Database('./database.db');
 
 db.serialize(() => {
-
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT,
         email TEXT UNIQUE,
         password TEXT,
+        google_id TEXT UNIQUE,
         tg_id TEXT UNIQUE,
         elo INTEGER DEFAULT 1000,
-        xp INTEGER DEFAULT 0
+        avatar TEXT
     )`);
 });
 
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(session({
+    secret: 'gomoku_secret_key', // In Produktion sicher aufbewahren!
+    resave: false,
+    saveUninitialized: false
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.static('public'));
 
+// Passport Konfiguration
+passport.use(new LocalStrategy({ usernameField: 'email' }, (email, password, done) => {
+    db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
+        if (err) return done(err);
+        if (!user) return done(null, false, { message: 'Email nicht gefunden.' });
+        
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return done(null, false, { message: 'Passwort falsch.' });
+        
+        return done(null, user);
+    });
+}));
 
-let waitingPlayer = null; 
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser((id, done) => {
+    db.get("SELECT * FROM users WHERE id = ?", [id], (err, row) => done(err, row));
+});
+
+// --- AUTH ROUTES ---
+
+// Registrierung
+app.post('/register', async (req, res) => {
+    const { username, email, password } = req.body;
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        db.run("INSERT INTO users (username, email, password) VALUES (?, ?, ?)", 
+            [username, email, hashedPassword], 
+            (err) => {
+                if (err) return res.status(400).send("Email bereits vergeben.");
+                res.send({ success: true });
+            }
+        );
+    } catch (e) { res.status(500).send("Fehler bei der Registrierung"); }
+});
+
+// Login
+app.post('/login', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+        if (err) return next(err);
+        if (!user) return res.status(401).send(info.message);
+        req.logIn(user, (err) => {
+            if (err) return next(err);
+            return res.send({ success: true, user: { username: user.username, elo: user.elo } });
+        });
+    })(req, res, next);
+});
+
+// --- SOCKET.IO LOGIK (Matchmaking & Moves) ---
+let waitingPlayer = null;
 let activeGames = new Map();
 
 io.on('connection', (socket) => {
-    console.log('Ein Spieler hat sich verbunden:', socket.id);
-
-    socket.on('login', (data) => {
-        if (data.tg_id) {
-
-            db.get("SELECT * FROM users WHERE tg_id = ?", [data.tg_id], (err, row) => {
-                if (row) {
-                    socket.emit('loginSuccess', row);
-                } else {
-                    db.run("INSERT INTO users (username, tg_id) VALUES (?, ?)", [data.username, data.tg_id], function(err) {
-                        if (err) return console.error(err.message);
-                        socket.emit('loginSuccess', { id: this.lastID, username: data.username, elo: 1000 });
-                    });
-                }
-            });
-        } else if (data.email) {
-
-            db.get("SELECT * FROM users WHERE email = ?", [data.email], (err, row) => {
-                if (row) {
-                    socket.emit('loginSuccess', row);
-                } else {
-                    socket.emit('loginError', 'User nicht gefunden.');
-                }
-            });
-        }
-    });
-
-
     socket.on('findGame', (userData) => {
         if (waitingPlayer && waitingPlayer.id !== socket.id) {
             const gameId = `game_${Date.now()}`;
             const opponent = waitingPlayer;
             waitingPlayer = null;
-
             const gameState = {
                 id: gameId,
-                players: {
-                    [socket.id]: { symbol: 1, name: userData.username }, 
-                    [opponent.id]: { symbol: -1, name: opponent.name } 
-                },
-                board: new Map(),
-                turn: 1 
+                players: { [socket.id]: { symbol: 1, name: userData.username }, [opponent.id]: { symbol: -1, name: opponent.name } },
+                board: new Map(), turn: 1
             };
-
             activeGames.set(gameId, gameState);
-
-            socket.join(gameId);
-            opponent.socket.join(gameId);
-
-            io.to(gameId).emit('matchFound', {
-                gameId: gameId,
-                yourSymbol: 0,
-                players: gameState.players
-            });
-
-            console.log(`Spiel gestartet: ${gameId}`);
+            socket.join(gameId); opponent.socket.join(gameId);
+            io.to(gameId).emit('matchFound', { gameId, players: gameState.players });
         } else {
-            waitingPlayer = { id: socket.id, socket: socket, name: userData.username };
-            socket.emit('waiting', 'Suche nach einem Gegner...');
+            waitingPlayer = { id: socket.id, socket, name: userData.username };
+            socket.emit('waiting', 'Suche Gegner...');
         }
     });
 
-
-
     socket.on('makeMove', ({ gameId, x, y }) => {
         const game = activeGames.get(gameId);
-        if (!game) return;
-
-        const playerSymbol = game.players[socket.id].symbol;
-
-        if (game.turn !== playerSymbol) return;
-        if (game.board.has(key(x, y))) return;
-
-        game.board.set(key(x, y), playerSymbol);
-
-        const winLine = checkWinLine(x, y, playerSymbol, game.board);
-
-        io.to(gameId).emit('moveMade', { x, y, player: playerSymbol });
+        if (!game || game.turn !== game.players[socket.id].symbol || game.board.has(key(x, y))) return;
+        
+        game.board.set(key(x, y), game.players[socket.id].symbol);
+        const winLine = checkWinLine(x, y, game.players[socket.id].symbol, game.board);
+        io.to(gameId).emit('moveMade', { x, y, player: game.players[socket.id].symbol });
 
         if (winLine) {
             io.to(gameId).emit('gameOver', { winner: socket.id, line: winLine });
             activeGames.delete(gameId);
-        } else {
-            game.turn *= -1;
-        }
-    });
-
-    socket.on('disconnect', () => {
-        if (waitingPlayer && waitingPlayer.id === socket.id) waitingPlayer = null;
-        console.log('Spieler hat die Verbindung getrennt.');
+        } else { game.turn *= -1; }
     });
 });
 
 const PORT = 3000;
-server.listen(PORT, () => {
-    console.log(`Server runns on http://localhost:${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server runns on http://localhost:${PORT}`));

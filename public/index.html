@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>Gomoku Portal</title>
+    <link rel="stylesheet" href="styles-index.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .auth-box { background: #222; padding: 20px; border-radius: 12px; width: 320px; margin: 0 auto; }
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+        .social-logins { margin-top: 20px; border-top: 1px solid #444; padding-top: 15px; }
+        input { width: 90%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #444; background: #333; color: white; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>GOMOKU</h1>
+
+    <div id="auth-container" class="auth-box">
+        <div class="tab-buttons">
+            <button onclick="showTab('login')" class="btn-menu" style="width: auto; padding: 5px 15px;">Login</button>
+            <button onclick="showTab('register')" class="btn-menu" style="width: auto; padding: 5px 15px;">Neu hier?</button>
+        </div>
+
+        <form id="login-form">
+            <input type="email" id="l-email" placeholder="E-Mail" required>
+            <input type="password" id="l-pass" placeholder="Passwort" required>
+            <button type="submit" class="btn-start" style="width: 100%;">Einloggen</button>
+        </form>
+
+        <form id="register-form" class="hidden">
+            <input type="text" id="r-user" placeholder="Username" required>
+            <input type="email" id="r-email" placeholder="E-Mail" required>
+            <input type="password" id="r-pass" placeholder="Passwort" required>
+            <button type="submit" class="btn-start" style="width: 100%;">Konto erstellen</button>
+        </form>
+
+        <div class="social-logins">
+            <button class="btn-menu" style="background: #db4437; color: white; font-size: 14px; margin-bottom: 5px;">Mit Google anmelden</button>
+            <button class="btn-menu" style="background: #0088cc; color: white; font-size: 14px;">Mit Telegram anmelden</button>
+        </div>
+    </div>
+
+    <div id="lobby-container" class="auth-box hidden">
+        <h2 id="user-greeting">Hallo!</h2>
+        <p>Deine ELO: <span id="user-elo">1000</span></p>
+        <button id="find-game-btn" class="btn-start" style="width: 100%;">Online Match suchen</button>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    let currentUser = null;
+
+    function showTab(type) {
+        document.getElementById('login-form').classList.toggle('hidden', type !== 'login');
+        document.getElementById('register-form').classList.toggle('hidden', type !== 'register');
+    }
+
+    document.getElementById('register-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const res = await fetch('/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                username: document.getElementById('r-user').value,
+                email: document.getElementById('r-email').value,
+                password: document.getElementById('r-pass').value
+            })
+        });
+        if(res.ok) { alert("Erfolgreich registriert! Bitte logge dich nun ein."); showTab('login'); }
+        else { alert("Fehler: Email evtl. schon vergeben."); }
+    };
+
+    document.getElementById('login-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const res = await fetch('/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: document.getElementById('l-email').value,
+                password: document.getElementById('l-pass').value
+            })
+        });
+        const data = await res.json();
+        if(data.success) {
+            currentUser = data.user;
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('lobby-container').classList.remove('hidden');
+            document.getElementById('user-greeting').innerText = `Hallo, ${data.user.username}!`;
+            document.getElementById('user-elo').innerText = data.user.elo;
+        } else { alert("Login fehlgeschlagen."); }
+    };
+
+
+    document.getElementById('find-game-btn').onclick = () => {
+        socket.emit('findGame', currentUser);
+        document.getElementById('find-game-btn').innerText = "Suche Gegner...";
+    };
+
+    socket.on('matchFound', (data) => {
+        alert("Spiel gefunden! Lade Spielfeld...");
+    });
+</script>
+</body>
+</html>
