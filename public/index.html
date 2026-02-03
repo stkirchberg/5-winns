@@ -1,71 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Gomoku Account</title>
+    <title>Auth</title>
     <style>
-        body { background: #111; color: white; font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; }
-        .card { background: #222; padding: 25px; border-radius: 10px; width: 300px; text-align: center; }
-        input { width: 100%; padding: 10px; margin: 10px 0; background: #333; color: white; border: 1px solid #444; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #1e8359; border: none; color: white; cursor: pointer; }
-        .hidden { display: none; }
-        .link { color: #888; cursor: pointer; font-size: 12px; margin-top: 10px; display: block; }
+        body { background: #111; color: #fff; font-family: sans-serif; text-align: center; }
+        .card { background: #222; padding: 20px; width: 300px; margin: 50px auto; border-radius: 8px; }
+        input { width: 90%; padding: 10px; margin: 10px 0; background: #333; color: #fff; border: none; }
+        button { width: 95%; padding: 10px; background: #1e8359; color: #fff; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
-
-    <div id="auth-view" class="card">
-        <h2 id="auth-title">Login</h2>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button id="main-btn" onclick="handleSubmit()">Login</button>
-        <span class="link" id="toggle-link" onclick="toggleMode()">No account? Register here</span>
+    <div class="card">
+        <h2 id="title">Login</h2>
+        <input id="user" placeholder="Username">
+        <input id="pass" type="password" placeholder="Password">
+        <button onclick="auth()">Submit</button>
+        <p onclick="mode = !mode; document.getElementById('title').innerText = mode ? 'Login' : 'Register'" style="cursor:pointer; font-size:12px">Toggle Mode</p>
     </div>
-
-    <div id="profile-view" class="card hidden">
-        <h2>Profile</h2>
-        <p>Welcome, <span id="display-name" style="color: #1e8359; font-weight: bold;"></span></p>
-        <button onclick="location.reload()" style="background: #444;">Logout</button>
-    </div>
-
     <script>
-        let isLogin = true;
-
-        function toggleMode() {
-            isLogin = !isLogin;
-            document.getElementById('auth-title').innerText = isLogin ? "Login" : "Register";
-            document.getElementById('main-btn').innerText = isLogin ? "Login" : "Register";
-            document.getElementById('toggle-link').innerText = isLogin ? "No account? Register here" : "Have an account? Login here";
-        }
-
-        async function handleSubmit() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const endpoint = isLogin ? '/api/login' : '/api/register';
-
-            const res = await fetch(endpoint, {
+        let mode = true; 
+        async function auth() {
+            const username = document.getElementById('user').value;
+            const password = document.getElementById('pass').value;
+            const route = mode ? '/api/login' : '/api/register';
+            const res = await fetch(route, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
             });
-
-            if (res.ok) {
-                if (isLogin) showProfile();
-                else { alert("Registered! You can login now."); toggleMode(); }
-            } else {
-                const err = await res.json();
-                alert(err.error);
-            }
-        }
-
-        async function showProfile() {
-            const res = await fetch('/api/me');
-            if (res.ok) {
-                const user = await res.json();
-                document.getElementById('display-name').innerText = user.username;
-                document.getElementById('auth-view').classList.add('hidden');
-                document.getElementById('profile-view').classList.remove('hidden');
-            }
+            const data = await res.json();
+            if (res.ok && data.success) {
+                if (mode) window.location.href = '/profile.html';
+                else alert('Registered');
+            } else alert('Error');
         }
     </script>
 </body>
