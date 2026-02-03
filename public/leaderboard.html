@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaderboard</title>
+    <style>
+        body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .list { background: #222; padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px; border: 1px solid #1e8359; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border-bottom: 1px solid #333; }
+        th { color: #1e8359; }
+        .back-btn { margin-top: 20px; display: inline-block; color: #888; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>Global Ranking</h1>
+    <div class="list">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>ELO</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-data">
+                </tbody>
+        </table>
+        <a href="profile.html" class="back-btn">Back to Profile</a>
+    </div>
+
+    <script>
+        async function loadLeaderboard() {
+            const res = await fetch('/api/leaderboard');
+            const players = await res.json();
+            const tbody = document.getElementById('leaderboard-data');
+            
+            tbody.innerHTML = players.map((p, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${p.username}</td>
+                    <td>${p.elo}</td>
+                </tr>
+            `).join('');
+        }
+        loadLeaderboard();
+    </script>
+</body>
+</html>

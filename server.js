@@ -12,7 +12,7 @@ db.serialize(() => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
         password TEXT,
-        elo INTEGER DEFAULT 1000
+        elo INTEGER DEFAULT 100
     )`);
 });
 
