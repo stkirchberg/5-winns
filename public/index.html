@@ -2,65 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login System</title>
+    <title>Gomoku Account</title>
     <style>
-        body { background: #111; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .box { background: #222; padding: 20px; border-radius: 8px; width: 300px; }
-        input { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; background: #333; color: white; border: 1px solid #444; }
-        button { width: 100%; padding: 10px; margin-top: 10px; cursor: pointer; background: #1e8359; border: none; color: white; }
+        body { background: #111; color: white; font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; }
+        .card { background: #222; padding: 25px; border-radius: 10px; width: 300px; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 10px 0; background: #333; color: white; border: 1px solid #444; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #1e8359; border: none; color: white; cursor: pointer; }
         .hidden { display: none; }
+        .link { color: #888; cursor: pointer; font-size: 12px; margin-top: 10px; display: block; }
     </style>
 </head>
 <body>
-    <div id="auth" class="box">
-        <div id="login-form">
-            <h2>Login</h2>
-            <input type="email" id="l-email" placeholder="Email">
-            <input type="password" id="l-pass" placeholder="Password">
-            <button onclick="login()">Login</button>
-            <p onclick="toggle()">No account? Register</p>
-        </div>
-        <div id="reg-form" class="hidden">
-            <h2>Register</h2>
-            <input type="text" id="r-user" placeholder="Username">
-            <input type="email" id="r-email" placeholder="Email">
-            <input type="password" id="r-pass" placeholder="Password">
-            <button onclick="register()">Create</button>
-            <p onclick="toggle()">Back to Login</p>
-        </div>
+
+    <div id="auth-view" class="card">
+        <h2 id="auth-title">Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button id="main-btn" onclick="handleSubmit()">Login</button>
+        <span class="link" id="toggle-link" onclick="toggleMode()">No account? Register here</span>
+    </div>
+
+    <div id="profile-view" class="card hidden">
+        <h2>Profile</h2>
+        <p>Welcome, <span id="display-name" style="color: #1e8359; font-weight: bold;"></span></p>
+        <button onclick="location.reload()" style="background: #444;">Logout</button>
     </div>
 
     <script>
-        function toggle() {
-            document.getElementById('login-form').classList.toggle('hidden');
-            document.getElementById('reg-form').classList.toggle('hidden');
+        let isLogin = true;
+
+        function toggleMode() {
+            isLogin = !isLogin;
+            document.getElementById('auth-title').innerText = isLogin ? "Login" : "Register";
+            document.getElementById('main-btn').innerText = isLogin ? "Login" : "Register";
+            document.getElementById('toggle-link').innerText = isLogin ? "No account? Register here" : "Have an account? Login here";
         }
 
-        async function register() {
-            const res = await fetch('/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    username: document.getElementById('r-user').value,
-                    email: document.getElementById('r-email').value,
-                    password: document.getElementById('r-pass').value
-                })
-            });
-            if (res.ok) alert("User created");
-        }
+        async function handleSubmit() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const endpoint = isLogin ? '/api/login' : '/api/register';
 
-        async function login() {
-            const res = await fetch('/login', {
+            const res = await fetch(endpoint, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    email: document.getElementById('l-email').value,
-                    password: document.getElementById('l-pass').value
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
             });
+
             if (res.ok) {
-                const data = await res.json();
-                alert("Logged in as " + data.user.username);
+                if (isLogin) showProfile();
+                else { alert("Registered! You can login now."); toggleMode(); }
+            } else {
+                const err = await res.json();
+                alert(err.error);
+            }
+        }
+
+        async function showProfile() {
+            const res = await fetch('/api/me');
+            if (res.ok) {
+                const user = await res.json();
+                document.getElementById('display-name').innerText = user.username;
+                document.getElementById('auth-view').classList.add('hidden');
+                document.getElementById('profile-view').classList.remove('hidden');
             }
         }
     </script>

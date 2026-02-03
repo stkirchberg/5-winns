@@ -1,64 +1,52 @@
 const express = require('express');
-const http = require('http');
+const session = require('express-session');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
 const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
 const db = new sqlite3.Database('./database.db');
 
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT,
-        email TEXT UNIQUE,
-        password TEXT,
-        google_id TEXT UNIQUE,
-        tg_id TEXT UNIQUE,
-        elo INTEGER DEFAULT 1000
+        username TEXT UNIQUE,
+        password TEXT
     )`);
 });
 
 app.use(express.json());
+app.use(express.static('public'));
 app.use(session({
-    secret: 'session_secret',
+    secret: 'dev_secret',
     resave: false,
     saveUninitialized: false
 }));
-app.use(passport.initialize());
-app.use(passport.session());
-app.use(express.static('public'));
 
-passport.use(new LocalStrategy({ usernameField: 'email' }, (email, password, done) => {
-    db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
-        if (err) return done(err);
-        if (!user) return done(null, false);
-        const match = await bcrypt.compare(password, user.password);
-        if (!match) return done(null, false);
-        return done(null, user);
-    });
-}));
-
-passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => {
-    db.get("SELECT * FROM users WHERE id = ?", [id], (err, row) => done(err, row));
-});
-
-app.post('/register', async (req, res) => {
-    const { username, email, password } = req.body;
+app.post('/api/register', async (req, res) => {
+    const { username, password } = req.body;
     const hash = await bcrypt.hash(password, 10);
-    db.run("INSERT INTO users (username, email, password) VALUES (?, ?, ?)", [username, email, hash], (err) => {
-        if (err) return res.status(400).json({ error: "Exists" });
+    db.run("INSERT INTO users (username, password) VALUES (?, ?)", [username, hash], (err) => {
+        if (err) return res.status(400).json({ error: "Username taken" });
         res.json({ success: true });
     });
 });
 
-app.post('/login', passport.authenticate('local'), (req, res) => {
-    res.json({ success: true, user: { username: req.user.username, elo: req.user.elo } });
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    db.get("SELECT * FROM users WHERE username = ?", [username], async (err, user) => {
+        if (user && await bcrypt.compare(password, user.password)) {
+            req.session.user = { id: user.id, username: user.username };
+            res.json({ success: true });
+        } else {
+            res.status(401).json({ error: "Invalid credentials" });
+        }
+    });
 });
 
-server.listen(3000);
+app.get('/api/me', (req, res) => {
+    if (req.session.user) res.json(req.session.user);
+    else res.status(401).json({ error: "Not logged in" });
+});
+
+app.listen(3000, () => console.log('Server: http://localhost:3000'));
