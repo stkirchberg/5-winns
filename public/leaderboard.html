@@ -29,20 +29,34 @@
     </div>
 
     <script>
-        async function loadLeaderboard() {
+    async function loadLeaderboard() {
+        try {
             const res = await fetch('/api/leaderboard');
             const players = await res.json();
             const tbody = document.getElementById('leaderboard-data');
-            
-            tbody.innerHTML = players.map((p, index) => `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${p.username}</td>
-                    <td>${p.elo}</td>
-                </tr>
-            `).join('');
+
+            tbody.innerHTML = ""; 
+
+            if (players.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='3'>No players found</td></tr>";
+                return;
+            }
+
+            players.forEach((p, index) => {
+                const row = `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${p.username}</td>
+                        <td>${p.elo || 100}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        } catch (err) {
+            console.error("Failed to load leaderboard:", err);
         }
-        loadLeaderboard();
-    </script>
+    }
+    loadLeaderboard();
+</script>
 </body>
 </html>

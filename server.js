@@ -46,8 +46,21 @@ app.post('/api/login', (req, res) => {
 });
 
 app.get('/api/me', (req, res) => {
-    if (req.session.user) res.json(req.session.user);
-    else res.status(401).json({ error: 'unauthorized' });
+    if (req.session.user) {
+        res.json(req.session.user);
+    } else {
+        res.status(401).json({ error: 'unauthorized' });
+    }
 });
 
-app.listen(3000, () => console.log('running on port 3000'));
+app.get('/api/leaderboard', (req, res) => {
+    db.all("SELECT username, elo FROM users ORDER BY elo DESC LIMIT 10", [], (err, rows) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json([]);
+        }
+        res.json(rows);
+    });
+});
+
+app.listen(3000, () => console.log('Server running on http://localhost:3000'));
