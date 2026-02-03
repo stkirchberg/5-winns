@@ -37,7 +37,7 @@ app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     db.get("SELECT * FROM users WHERE username = ?", [username], async (err, user) => {
         if (user && await bcrypt.compare(password, user.password)) {
-            req.session.user = user;
+            req.session.user = user; 
             res.json({ success: true });
         } else {
             res.status(401).json({ success: false });
