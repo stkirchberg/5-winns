@@ -42,12 +42,14 @@
 
     <script>
         fetch('/api/me').then(res => {
-            if (res.ok) return res.json();
-            window.location.href = '/index.html';
-        }).then(user => {
-            document.getElementById('username').innerText = user.username;
-            document.getElementById('elo').innerText = user.elo || 1000;
-        });
+    if (res.ok) return res.json();
+    window.location.href = '/index.html';
+}).then(user => {
+    if (user) {
+        document.getElementById('username').innerText = user.username;
+        document.getElementById('elo').innerText = user.elo;
+    }
+});
 
         function logout() {
             window.location.href = '/index.html';
