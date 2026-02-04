@@ -14,6 +14,11 @@ body {
     margin: 0;
 }
 
+a {
+    color: var(--accent-green);
+    text-decoration: none;
+}
+
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -41,10 +46,12 @@ body {
 }
 
 .avatar-container img {
-    width: 150px; height: 150px;
+    width: 150px; 
+    height: 150px;
     border-radius: 50%;
-    border: 3px solid var(--accent-green);
+    border: 4px solid var(--accent-green);
     object-fit: cover;
+    transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
 
 .level-badge {

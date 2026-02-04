@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>5 WINNS | Profile</title>
     <link rel="stylesheet" href="styles/profile-desktop.css">
+    <style>
+        .rank-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .avatar-container img {
+            transition: border-color 0.4s ease, box-shadow 0.4s ease;
+            border: 4px solid #2a2a2a;
+        }
+
+        .dark-theme {
+            background-color: #050505;
+            color: #ffffff;
+        }
+    </style>
 </head>
 <body class="dark-theme">
     <div class="navbar">
@@ -23,11 +47,12 @@
         <aside class="sidebar">
             <div class="profile-header">
                 <div class="avatar-container">
-                    <img id="display-pic" src="https://via.placeholder.com/150" alt="Avatar">
+                    <img id="display-pic" src="https://via.placeholder.com/150" alt="Avatar" class="avatar-img">
                     <div class="level-badge" id="elo-badge">100</div>
                 </div>
-                <h2 id="username">Loading...</h2>
-                <p id="bio-display" class="bio-text">No bio available.</p>
+                <h2 id="username" style="margin-bottom: 5px;">Loading...</h2>
+                <div id="rank-tag" class="rank-tag">Novice</div>
+                <p id="bio-display" class="bio-text" style="margin-top: 15px;">No bio available.</p>
             </div>
 
             <div class="stats-container">
@@ -37,11 +62,11 @@
                 </div>
                 <div class="stat-row">
                     <div class="stat-box mini">
-                        <span class="stat-label">Games</span>
+                        <span class="stat-label">Games Played</span>
                         <span class="stat-value" id="games-played">0</span>
                     </div>
                     <div class="stat-box mini highlight">
-                        <span class="stat-label">Wins</span>
+                        <span class="stat-label">Total Wins</span>
                         <span class="stat-value" id="wins-count">0</span>
                     </div>
                 </div>
@@ -58,7 +83,7 @@
                     <span class="tag">Recent Activity</span>
                 </div>
                 <h3>Welcome back!</h3>
-                <p>Your performance has been consistent. Check the leaderboard to see your global rank.</p>
+                <p>Your performance has been consistent. Check the leaderboard to see your global rank and compete with the best.</p>
             </div>
         </main>
     </div>
@@ -66,26 +91,41 @@
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <h2>Edit Profile</h2>
-            <div class="input-group">
-                <label>Profile Picture</label>
+            <div class="input-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; color: #a1a1a6;">Profile Picture</label>
                 <input type="file" id="fileInput" accept="image/*">
             </div>
-            <div class="input-group">
-                <label>Bio (max 500 characters)</label>
-                <textarea id="bio-input" placeholder="Tell us about yourself..."></textarea>
+            <div class="input-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; color: #a1a1a6;">Bio (max 500 characters)</label>
+                <textarea id="bio-input" placeholder="Tell us about yourself..." style="width: 100%; height: 100px; background: #050505; border: 1px solid #2a2a2a; color: white; border-radius: 8px; padding: 10px;"></textarea>
             </div>
-            <div class="modal-actions">
-                <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
-                <button class="btn-secondary" onclick="document.getElementById('settingsModal').style.display='none'">Cancel</button>
+            <div class="modal-actions" style="display: flex; gap: 10px;">
+                <button class="btn-primary" onclick="saveProfile()" style="flex: 1;">Save Changes</button>
+                <button class="btn-secondary" onclick="document.getElementById('settingsModal').style.display='none'" style="flex: 1;">Cancel</button>
             </div>
         </div>
     </div>
 
     <script>
+        function getRankDetails(elo) {
+            if (elo < 200) return { name: "Novice", color: "#8e8e93" };
+            if (elo < 400) return { name: "Apprentice", color: "#ffffff" };
+            if (elo < 600) return { name: "Competitor", color: "#cd7f32" };
+            if (elo < 800) return { name: "Strategist", color: "#c0c0c0" };
+            if (elo < 1000) return { name: "Expert", color: "#ffd700" };
+            if (elo < 1200) return { name: "Master", color: "#e5e4e2" };
+            if (elo < 1400) return { name: "Grandmaster", color: "#2ecc71" };
+            if (elo < 1600) return { name: "Elite", color: "#00d9ff" };
+            if (elo < 1800) return { name: "Champion", color: "#a55eea" };
+            return { name: "Legend", color: "#eb4d4b", glow: true };
+        }
+
         async function loadProfile() {
             const res = await fetch('/api/me');
             if (!res.ok) return window.location.href = '/';
             const user = await res.json();
+            
+            const rank = getRankDetails(user.elo);
             
             document.getElementById('username').innerText = user.username;
             document.getElementById('elo-display').innerText = user.elo;
@@ -94,7 +134,23 @@
             document.getElementById('wins-count').innerText = user.wins || 0;
             document.getElementById('bio-display').innerText = user.bio || "No bio set.";
             document.getElementById('bio-input').value = user.bio || "";
+            
             if (user.profile_pic) document.getElementById('display-pic').src = user.profile_pic;
+
+            const rankTag = document.getElementById('rank-tag');
+            const profileImg = document.getElementById('display-pic');
+            
+            rankTag.innerText = rank.name;
+            rankTag.style.color = rank.color;
+            rankTag.style.borderColor = rank.color;
+            rankTag.style.backgroundColor = `${rank.color}15`;
+            
+            profileImg.style.borderColor = rank.color;
+            
+            if (rank.glow) {
+                profileImg.style.boxShadow = `0 0 20px ${rank.color}88`;
+                rankTag.style.boxShadow = `0 0 10px ${rank.color}44`;
+            }
         }
 
         async function saveProfile() {
@@ -107,6 +163,7 @@
             if (res.ok) location.reload();
             else alert("Update failed.");
         }
+
         loadProfile();
     </script>
 </body>
