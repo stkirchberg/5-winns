@@ -6,10 +6,11 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "express": "^5.2.1",
     "express-session": "^1.18.0",
+    "multer": "^2.0.2",
     "socket.io": "^4.8.3",
-    "sqlite3": "^5.1.7",
-    "bcryptjs": "^2.4.3"
+    "sqlite3": "^5.1.7"
   }
 }
