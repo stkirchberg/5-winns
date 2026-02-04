@@ -26,6 +26,8 @@ db.serialize(() => {
         username TEXT UNIQUE,
         password TEXT,
         elo INTEGER DEFAULT 100,
+        games_played INTEGER DEFAULT 0,
+        wins INTEGER DEFAULT 0,
         bio TEXT DEFAULT '',
         profile_pic TEXT DEFAULT ''
     )`);
@@ -44,7 +46,7 @@ app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false });
     const hash = await bcrypt.hash(password, 10);
-    db.run("INSERT INTO users (username, password, elo, bio, profile_pic) VALUES (?, ?, 100, '', '')", [username, hash], (err) => {
+    db.run("INSERT INTO users (username, password, elo, games_played, wins, bio, profile_pic) VALUES (?, ?, 100, 0, 0, '', '')", [username, hash], (err) => {
         if (err) return res.status(400).json({ success: false });
         res.json({ success: true });
     });
@@ -64,7 +66,7 @@ app.post('/api/login', (req, res) => {
 
 app.get('/api/me', (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: 'unauthorized' });
-    db.get("SELECT username, elo, bio, profile_pic FROM users WHERE id = ?", [req.session.userId], (err, row) => {
+    db.get("SELECT username, elo, games_played, wins, bio, profile_pic FROM users WHERE id = ?", [req.session.userId], (err, row) => {
         if (row) res.json(row);
         else res.status(404).json({ error: 'not found' });
     });

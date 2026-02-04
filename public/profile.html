@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>5 WINNS</title>
+    <title>5 WINNS - Profile</title>
     <link rel="stylesheet" href="styles/profile-desktop.css">
-
 </head>
 <body>
     <div class="container">
@@ -15,9 +14,20 @@
             <p id="bio-display" style="color: var(--text-sub);"></p>
             
             <div class="stats-grid">
-                <div class="stat-item">
-                    <span class="label">Successes</span>
-                    <span class="value"><b id="wins">0</b> Points</span>
+                <div class="stat-item" style="margin-bottom: 15px;">
+                    <span class="label">Punkte (ELO)</span>
+                    <span class="value"><b id="elo-display">0</b></span>
+                </div>
+                <hr style="border: 0; border-top: 1px solid rgba(128,128,128,0.2); margin: 10px 0;">
+                <div style="display: flex; justify-content: space-around;">
+                    <div class="stat-item">
+                        <span class="label">GAMES</span>
+                        <span class="value"><b id="games-played">0</b></span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">WINS</span>
+                        <span class="value"><b id="wins-count">0</b></span>
+                    </div>
                 </div>
             </div>
 
@@ -50,8 +60,12 @@
             const res = await fetch('/api/me');
             if (!res.ok) return window.location.href = '/';
             const user = await res.json();
+            
             document.getElementById('username').innerText = user.username;
-            document.getElementById('wins').innerText = user.elo;
+            document.getElementById('elo-display').innerText = user.elo;
+            document.getElementById('games-played').innerText = user.games_played || 0;
+            document.getElementById('wins-count').innerText = user.wins || 0;
+            
             document.getElementById('bio-display').innerText = user.bio || "No bio set.";
             document.getElementById('bio-input').value = user.bio || "";
             if (user.profile_pic) document.getElementById('display-pic').src = user.profile_pic;
