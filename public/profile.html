@@ -1,59 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-    <title>Profile - Gomoku</title>
-    <style>
-        body { background: #111; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; padding-top: 80px; }
-        .profile-card { 
-            background: #1a1a1a; 
-            border: 2px solid #1e8359; 
-            border-radius: 15px; 
-            display: inline-block; 
-            padding: 40px; 
-            box-shadow: 0 0 20px rgba(30, 131, 89, 0.2);
-        }
-        h1 { margin-bottom: 30px; letter-spacing: 2px; }
-        .stat { font-size: 20px; margin: 15px 0; color: #ccc; }
-        .stat b { color: #1e8359; }
-        .logout-btn { 
-            margin-top: 30px; 
-            padding: 10px 25px; 
-            background: #444; 
-            border: none; 
-            color: white; 
-            cursor: pointer; 
-            border-radius: 5px;
-        }
-        .logout-btn:hover { background: #555; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gomoku Profil</title>
+    <link rel="stylesheet" href="styles/profile-desktop.css">
 </head>
 <body>
-    <div class="profile-card">
-        <h1>Dashboard</h1>
-        <div class="stat">Player: <b id="username">Loading...</b></div>
-        <div class="stat">Rank Score: <b id="elo">0</b> ELO</div>
-        
-        <button onclick="window.location.href='leaderboard.html'" style="background: #1e8359; margin-top:10px;">
-            View Leaderboard
-        </button><br>
-        
-        <button class="logout-btn" onclick="logout()">Logout</button>
+    <div class="container">
+        <main class="profile-card">
+            <div class="avatar-placeholder"></div>
+            <h1 id="username">Lade...</h1>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="label">Erfolge</span>
+                    <span class="value"><b id="wins">0</b> WINS</span>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn-primary" onclick="window.location.href='leaderboard.html'">
+                    Leaderboard
+                </button>
+                <button class="btn-secondary" onclick="logout()">
+                    Abmelden
+                </button>
+            </div>
+        </main>
     </div>
 
     <script>
-        fetch('/api/me').then(res => {
-    if (res.ok) return res.json();
-    window.location.href = '/index.html';
-}).then(user => {
-    if (user) {
-        document.getElementById('username').innerText = user.username;
-        document.getElementById('elo').innerText = user.elo;
-    }
-});
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/me');
+                if (!res.ok) throw new Error();
+                const user = await res.json();
+                
+                document.getElementById('username').innerText = user.username;
+                // Wir nutzen user.elo aus der DB für die Anzeige der "WINS"
+                document.getElementById('wins').innerText = user.elo || 0; 
+            } catch (err) {
+                window.location.href = '/index.html';
+            }
+        }
 
-        function logout() {
+        async function logout() {
+            // Optional: Hier noch einen fetch zu /api/logout einbauen
             window.location.href = '/index.html';
         }
+
+        loadProfile();
     </script>
 </body>
 </html>

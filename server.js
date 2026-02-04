@@ -22,8 +22,8 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: false, // Auf true setzen, wenn du HTTPS nutzt
-        maxAge: 1000 * 60 * 60 * 24 // 1 Tag gültig
+        secure: false,
+        maxAge: 1000 * 60 * 60 * 24 
     }
 }));
 
@@ -42,7 +42,7 @@ app.post('/api/login', (req, res) => {
     db.get("SELECT * FROM users WHERE username = ?", [username], async (err, user) => {
         if (user && await bcrypt.compare(password, user.password)) {
             req.session.userId = user.id;
-            // WICHTIG: Session explizit speichern vor dem Response
+
             req.session.save((err) => {
                 if (err) return res.status(500).json({ success: false });
                 res.json({ success: true });
@@ -71,4 +71,4 @@ app.get('/api/leaderboard', (req, res) => {
     });
 });
 
-app.listen(3000, () => console.log('Server läuft auf Port 3000'));
+app.listen(3000, () => console.log('Server runs on port 3000 - http://localhost:3000'));
