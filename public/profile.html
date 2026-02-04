@@ -3,38 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>5 WINNS - Profile</title>
+    <title>5 WINNS | Profile</title>
     <link rel="stylesheet" href="styles/profile-desktop.css">
 </head>
-<body>
+<body class="dark-theme">
+    <div class="navbar">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            <span>5 WINNS</span>
+        </div>
+        <nav>
+            <a href="game.html">Play</a>
+            <a href="leaderboard.html">Leaderboard</a>
+            <a href="/" class="logout">Logout</a>
+        </nav>
+    </div>
+
     <div class="container">
-        <main class="profile-card">
-            <img id="display-pic" src="https://via.placeholder.com/100" class="avatar-img">
-            <h1 id="username">Loading...</h1>
-            <p id="bio-display" style="color: var(--text-sub);"></p>
-            
-            <div class="stats-grid">
-                <div class="stat-item" style="margin-bottom: 15px;">
-                    <span class="label">Punkte (ELO)</span>
-                    <span class="value"><b id="elo-display">0</b></span>
+        <aside class="sidebar">
+            <div class="profile-header">
+                <div class="avatar-container">
+                    <img id="display-pic" src="https://via.placeholder.com/150" alt="Avatar">
+                    <div class="level-badge" id="elo-badge">100</div>
                 </div>
-                <hr style="border: 0; border-top: 1px solid rgba(128,128,128,0.2); margin: 10px 0;">
-                <div style="display: flex; justify-content: space-around;">
-                    <div class="stat-item">
-                        <span class="label">GAMES</span>
-                        <span class="value"><b id="games-played">0</b></span>
+                <h2 id="username">Loading...</h2>
+                <p id="bio-display" class="bio-text">No bio available.</p>
+            </div>
+
+            <div class="stats-container">
+                <div class="stat-box">
+                    <span class="stat-label">Rating</span>
+                    <span class="stat-value" id="elo-display">100</span>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-box mini">
+                        <span class="stat-label">Games</span>
+                        <span class="stat-value" id="games-played">0</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="label">WINS</span>
-                        <span class="value"><b id="wins-count">0</b></span>
+                    <div class="stat-box mini highlight">
+                        <span class="stat-label">Wins</span>
+                        <span class="stat-value" id="wins-count">0</span>
                     </div>
                 </div>
             </div>
 
-            <div class="actions">
-                <button class="btn-primary" onclick="document.getElementById('settingsModal').style.display='block'">Settings</button>
-                <button class="btn-primary" onclick="window.location.href='leaderboard.html'">Leaderboard</button>
-                <button class="btn-secondary" onclick="location.href='/'">Logout</button>
+            <button class="btn-edit" onclick="document.getElementById('settingsModal').style.display='flex'">
+                Edit Profile
+            </button>
+        </aside>
+
+        <main class="content-area">
+            <div class="card">
+                <div class="card-header">
+                    <span class="tag">Recent Activity</span>
+                </div>
+                <h3>Welcome back!</h3>
+                <p>Your performance has been consistent. Check the leaderboard to see your global rank.</p>
             </div>
         </main>
     </div>
@@ -42,13 +66,15 @@
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <h2>Edit Profile</h2>
-            <label>Profile Picture:</label>
-            <input type="file" id="fileInput" accept="image/*">
-            
-            <br><label>Bio (max 500):</label>
-            <textarea id="bio-input" maxlength="500"></textarea>
-            
-            <div style="margin-top:20px; display:flex; gap:10px;">
+            <div class="input-group">
+                <label>Profile Picture</label>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+            <div class="input-group">
+                <label>Bio (max 500 characters)</label>
+                <textarea id="bio-input" placeholder="Tell us about yourself..."></textarea>
+            </div>
+            <div class="modal-actions">
                 <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
                 <button class="btn-secondary" onclick="document.getElementById('settingsModal').style.display='none'">Cancel</button>
             </div>
@@ -63,9 +89,9 @@
             
             document.getElementById('username').innerText = user.username;
             document.getElementById('elo-display').innerText = user.elo;
+            document.getElementById('elo-badge').innerText = user.elo;
             document.getElementById('games-played').innerText = user.games_played || 0;
             document.getElementById('wins-count').innerText = user.wins || 0;
-            
             document.getElementById('bio-display').innerText = user.bio || "No bio set.";
             document.getElementById('bio-input').value = user.bio || "";
             if (user.profile_pic) document.getElementById('display-pic').src = user.profile_pic;
@@ -73,24 +99,13 @@
 
         async function saveProfile() {
             const formData = new FormData();
-            const fileField = document.getElementById('fileInput');
-            const bioField = document.getElementById('bio-input');
-    
-            formData.append('bio', bioField.value);
-            if (fileField.files[0]) {
-                formData.append('avatar', fileField.files[0]);
-            }
+            formData.append('bio', document.getElementById('bio-input').value);
+            const file = document.getElementById('fileInput').files[0];
+            if (file) formData.append('avatar', file);
 
-            const res = await fetch('/api/update-profile', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (res.ok) {
-                location.reload();
-            } else {
-                alert("Upload failed.");
-            }
+            const res = await fetch('/api/update-profile', { method: 'POST', body: formData });
+            if (res.ok) location.reload();
+            else alert("Update failed.");
         }
         loadProfile();
     </script>
